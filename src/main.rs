@@ -1,7 +1,8 @@
-use std::io::{Read, Write};
+use std::io::{Error, Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::thread;
 
-fn handle_client(mut stream: &TcpStream) -> std::io::Result<()> {
+fn handle_client(mut stream: TcpStream) -> Result<(), Error> {
     loop {
         let mut buf = [0; 512];
         let size = stream.read(&mut buf)?;
@@ -26,13 +27,9 @@ fn handle_client(mut stream: &TcpStream) -> std::io::Result<()> {
 fn main() {
     let listerner = TcpListener::bind("127.0.0.1:6379").unwrap();
     for stream in listerner.incoming() {
-        match stream {
-            Ok(mut _stream) => {
-                let _ = handle_client(&_stream);
-            }
-            Err(e) => {
-                panic!("ecountered IO error: {e}")
-            }
-        }
+        let stream = stream.unwrap();
+        thread::spawn(|| {
+            let _ = handle_client(stream);
+        });
     }
 }
