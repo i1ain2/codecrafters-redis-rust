@@ -9,16 +9,20 @@ fn handle_client(mut stream: TcpStream) -> Result<(), Error> {
         if size == 0 {
             break;
         }
-        let req = String::from_utf8(buf[..size].to_vec()).unwrap();
-        match &*req {
-            // "PING" => {
-            //     stream.write(b"+PONG\r\n")?;
-            // }
-            // _ => passprintln!("not matched: {}", req),
-            _ => {
+        let req_string = String::from_utf8(buf[..size].to_vec()).unwrap();
+        let resp_array: Vec<&str> = req_string.split("\r\n").collect();
+        let cmd = resp_array.get(2).unwrap().to_uppercase();
+        match &*cmd {
+            "PING" => {
                 stream.write(b"+PONG\r\n")?;
-                stream.flush()?;
             }
+            "ECHO" => {
+                // https://redis.io/docs/reference/protocol-spec/#resp-bulk-strings
+                let s = resp_array.get(4).unwrap();
+                let echo = format!("${}\r\n{}\r\n", s.len(), s);
+                stream.write(echo.as_bytes())?;
+            }
+            _ => println!("not matched: {:?}", resp_array),
         }
     }
     Ok(())
